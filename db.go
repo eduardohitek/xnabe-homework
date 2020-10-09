@@ -1,7 +1,10 @@
 package main
 
 import (
+	"context"
+
 	gmc "github.com/eduardohitek/golang-mongo-common"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -21,8 +24,8 @@ func NewDB(DBUrl string, DBName string, DBUser string, DBPass string, DBLocal st
 	return &DB{DBUrl: DBUrl, DBName: DBName, DBUser: DBUser, DBPass: DBPass, DBLocal: DBLocal, Log: Log}
 }
 
-func (db *DB) connectarDB(serviceName string) {
-	erro := db.retornarClient(serviceName)
+func (db *DB) connectDB(serviceName string) {
+	erro := db.returnClient(serviceName)
 	if erro != nil {
 		db.Log.Logger.Println("Erro ao se connectar com o DB", erro.Error())
 		return
@@ -30,7 +33,7 @@ func (db *DB) connectarDB(serviceName string) {
 	db.Log.Logger.Println("Connected to DB!")
 }
 
-func (db *DB) retornarClient(serviceName string) error {
+func (db *DB) returnClient(serviceName string) error {
 	var erro error
 	if db.DBLocal == "Y" {
 		db.Client, erro = gmc.RetornarCliente(db.DBUrl, serviceName)
@@ -41,4 +44,21 @@ func (db *DB) retornarClient(serviceName string) error {
 		db.Log.Logger.Fatalln(erro.Error())
 	}
 	return erro
+}
+
+func (db *DB) resetDatabase() (*mongo.DeleteResult, error) {
+	return gmc.Deletar(db.DBName, "accounts", db.Client, bson.M{})
+}
+
+func (db *DB) getBalance(ID int64) (*Account, error) {
+	account := &Account{}
+	filter := bson.M{"id": ID}
+	collection := db.Client.Database(db.DBName).Collection("accounts")
+	result := collection.FindOne(context.TODO(), filter)
+	erro := result.Decode(&account)
+	if erro != nil {
+		db.Log.Logger.Println("Error on retrieving the account", erro.Error())
+		return nil, erro
+	}
+	return account, nil
 }

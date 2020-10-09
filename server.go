@@ -38,11 +38,13 @@ func NewServer(serviceName string) *Server {
 
 func (s *Server) initRoutes() {
 	s.Fiber.Get("/", s.H.handlerRetornarTodas)
+	s.Fiber.Post("/reset", s.H.reset)
+	s.Fiber.Get("/balance", s.H.getBalance)
 }
 
 func (s *Server) init() {
 	s.initRoutes()
-	s.DB.connectarDB(s.ServiceName)
+	s.DB.connectDB(s.ServiceName)
 }
 
 func (s *Server) run() {
@@ -60,9 +62,9 @@ func recuperarEnvVar(nome string, valorPadrao string) string {
 
 func createDB(log *LogHeimdall) *DB {
 	DBUrl := recuperarEnvVar("DB_URL_", "localhost")
-	DBName := recuperarEnvVar("DB_NAME", "tu-dev")
-	DBUser := recuperarEnvVar("DB_USER", "tactus")
-	DBPass := recuperarEnvVar("DB_PASS", "pass")
+	DBName := recuperarEnvVar("DB_NAME", "ebanx-bank")
+	DBUser := recuperarEnvVar("DB_USER", "")
+	DBPass := recuperarEnvVar("DB_PASS", "")
 	DBLocal := recuperarEnvVar("DB_LOCAL", "Y")
 	return NewDB(DBUrl, DBName, DBUser, DBPass, DBLocal, log)
 }
@@ -70,7 +72,7 @@ func createDB(log *LogHeimdall) *DB {
 func errorHandler(ctx *fiber.Ctx, err error) error {
 	code := fiber.StatusInternalServerError
 	ctx.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
-	NewLoggerHeimdall("Cardea Servico MS").Logger.Println("Ocorreu um erro ao processar sua requisição", err.Error())
+	NewLoggerHeimdall("EBANX Assignment").Logger.Println("Ocorreu um erro ao processar sua requisição", err.Error())
 	ctx.Status(code).JSON(fiber.Map{"msg": "Ocorreu um erro ao processar sua requisição", "erro": err.Error()})
 	return nil
 }

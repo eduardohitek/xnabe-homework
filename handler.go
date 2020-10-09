@@ -1,6 +1,8 @@
 package main
 
 import (
+	"strconv"
+
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -17,6 +19,27 @@ func NewHandler(DB *DB, Log *LogHeimdall) *Handler {
 
 func (h *Handler) handlerRetornarTodas(c *fiber.Ctx) error {
 	c.JSON(fiber.Map{"msg": "Retornando..."})
+	return nil
+}
+
+func (h *Handler) reset(c *fiber.Ctx) error {
+	_, error := h.DB.resetDatabase()
+	if error != nil {
+		return error
+	}
+	c.SendString("OK")
+	return nil
+}
+
+func (h *Handler) getBalance(c *fiber.Ctx) error {
+	id := c.Params("account_id", "0")
+	ID, _ := strconv.ParseInt(id, 10, 32)
+	account, erro := h.DB.getBalance(ID)
+	if erro != nil {
+		c.Status(404).SendString("0")
+		return nil
+	}
+	c.JSON(account)
 	return nil
 }
 
