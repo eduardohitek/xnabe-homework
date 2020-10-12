@@ -40,6 +40,7 @@ func (s *Server) initRoutes() {
 	s.Fiber.Get("/", s.H.handlerRetornarTodas)
 	s.Fiber.Post("/reset", s.H.reset)
 	s.Fiber.Get("/balance", s.H.getBalance)
+	s.Fiber.Post("/event", s.H.handleAccountEvent)
 }
 
 func (s *Server) init() {

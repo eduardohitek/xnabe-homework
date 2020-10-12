@@ -2,7 +2,7 @@ package main
 
 //Account represents a model
 type Account struct {
-	ID      int32   `json:"id" bson:"id"`
+	ID      string  `json:"id" bson:"id"`
 	Balance float32 `json:"balance" bson:"balance"`
 }
 

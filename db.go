@@ -50,7 +50,7 @@ func (db *DB) resetDatabase() (*mongo.DeleteResult, error) {
 	return gmc.Deletar(db.DBName, "accounts", db.Client, bson.M{})
 }
 
-func (db *DB) getBalance(ID int64) (*Account, error) {
+func (db *DB) getBalance(ID string) (*Account, error) {
 	account := &Account{}
 	filter := bson.M{"id": ID}
 	collection := db.Client.Database(db.DBName).Collection("accounts")
@@ -61,4 +61,18 @@ func (db *DB) getBalance(ID int64) (*Account, error) {
 		return nil, erro
 	}
 	return account, nil
+}
+
+func (db *DB) createAccount(account Account) (*mongo.InsertOneResult, error) {
+	collection := db.Client.Database(db.DBName).Collection("accounts")
+	result, error := collection.InsertOne(context.TODO(), account)
+	return result, error
+}
+
+func (db *DB) depositAmount(account Account) error {
+	filter := bson.M{"id": account.ID}
+	atualizacao := bson.D{{Key: "$inc", Value: bson.M{"balance": account.Balance}}}
+	collection := db.Client.Database(db.DBName).Collection("accounts")
+	_, error := collection.UpdateOne(context.TODO(), filter, atualizacao)
+	return error
 }

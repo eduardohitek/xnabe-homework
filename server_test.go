@@ -16,8 +16,32 @@ import (
 var server *Server
 var createdAccount = AccountEventResponse{
 	Destination: Account{
-		ID:      100,
-		Balance: 100,
+		ID:      "100",
+		Balance: 10,
+	},
+}
+var depositCreatedAccount = AccountEventResponse{
+	Destination: Account{
+		ID:      "100",
+		Balance: 20,
+	},
+}
+
+var withdrawCreatedAccount = AccountEventResponse{
+	Origin: Account{
+		ID:      "100",
+		Balance: 15,
+	},
+}
+
+var transferExistingAccount = AccountEventResponse{
+	Origin: Account{
+		ID:      "100",
+		Balance: 0,
+	},
+	Destination: Account{
+		ID:      "300",
+		Balance: 15,
 	},
 }
 
@@ -56,19 +80,91 @@ func TestCreateAccountWithInitialBalance(t *testing.T) {
 	response := executarRequisicao(request)
 	assert.Equal(t, fiber.StatusCreated, response.StatusCode, "shoud be equal")
 	body, _ := ioutil.ReadAll(response.Body)
+	log.Println("body:", string(body))
 	var retorno AccountEventResponse
 	json.Unmarshal(body, &retorno)
 	assert.Equal(t, createdAccount, retorno, "should be equal")
 }
 
-func TestRetornarTodas(t *testing.T) {
-	request := criarRequisicao("GET", "/", nil)
+func TestDepositIntoExistingAccount(t *testing.T) {
+	event := AccountEvent{
+		Type:        "deposit",
+		Destination: "100",
+		Amount:      10}
+	bodyPost, _ := json.Marshal(event)
+	request := criarRequisicao("POST", "/event", bodyPost)
 	response := executarRequisicao(request)
-	assert.Equal(t, http.StatusOK, response.StatusCode, "shoud be equal")
+	assert.Equal(t, fiber.StatusCreated, response.StatusCode, "shoud be equal")
 	body, _ := ioutil.ReadAll(response.Body)
-	var retorno map[string]string
+	var retorno AccountEventResponse
 	json.Unmarshal(body, &retorno)
-	assert.Equal(t, "Retornando...", retorno["msg"], "should be equal")
+	assert.Equal(t, depositCreatedAccount, retorno, "should be equal")
+}
+
+func TestGetBalanceExistingAccount(t *testing.T) {
+	request := criarRequisicao("GET", "/balance?account_id=100", nil)
+	response := executarRequisicao(request)
+	assert.Equal(t, fiber.StatusOK, response.StatusCode, "shoud be equal")
+	body, _ := ioutil.ReadAll(response.Body)
+	assert.Equal(t, "20", string(body), "should be equal")
+}
+
+func TestWithdrawNonExistingAccount(t *testing.T) {
+	event := AccountEvent{
+		Type:   "withdraw",
+		Origin: "200",
+		Amount: 10}
+	bodyPost, _ := json.Marshal(event)
+	request := criarRequisicao("POST", "/event", bodyPost)
+	response := executarRequisicao(request)
+	assert.Equal(t, fiber.StatusNotFound, response.StatusCode, "shoud be equal")
+	body, _ := ioutil.ReadAll(response.Body)
+	assert.Equal(t, "0", string(body), "should be equal")
+}
+
+func TestWithdrawExistingAccount(t *testing.T) {
+	event := AccountEvent{
+		Type:        "withdraw",
+		Destination: "100",
+		Amount:      5}
+	bodyPost, _ := json.Marshal(event)
+	request := criarRequisicao("POST", "/event", bodyPost)
+	response := executarRequisicao(request)
+	assert.Equal(t, fiber.StatusCreated, response.StatusCode, "shoud be equal")
+	body, _ := ioutil.ReadAll(response.Body)
+	var retorno AccountEventResponse
+	json.Unmarshal(body, &retorno)
+	assert.Equal(t, withdrawCreatedAccount, retorno, "should be equal")
+}
+
+func TestTransferExistingAccount(t *testing.T) {
+	event := AccountEvent{
+		Type:        "transfer",
+		Origin:      "100",
+		Destination: "300",
+		Amount:      15}
+	bodyPost, _ := json.Marshal(event)
+	request := criarRequisicao("POST", "/event", bodyPost)
+	response := executarRequisicao(request)
+	assert.Equal(t, fiber.StatusCreated, response.StatusCode, "shoud be equal")
+	body, _ := ioutil.ReadAll(response.Body)
+	var retorno AccountEventResponse
+	json.Unmarshal(body, &retorno)
+	assert.Equal(t, transferExistingAccount, retorno, "should be equal")
+}
+
+func TestTransferFromNonExistingAccount(t *testing.T) {
+	event := AccountEvent{
+		Type:        "transfer",
+		Origin:      "200",
+		Destination: "300",
+		Amount:      15}
+	bodyPost, _ := json.Marshal(event)
+	request := criarRequisicao("POST", "/event", bodyPost)
+	response := executarRequisicao(request)
+	assert.Equal(t, fiber.StatusNotFound, response.StatusCode, "shoud be equal")
+	body, _ := ioutil.ReadAll(response.Body)
+	assert.Equal(t, "0", string(body), "should be equal")
 }
 
 func criarRequisicao(metodo string, url string, reqBody []byte) *http.Request {
