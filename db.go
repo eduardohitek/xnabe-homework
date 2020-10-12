@@ -27,7 +27,7 @@ func NewDB(DBUrl string, DBName string, DBUser string, DBPass string, DBLocal st
 func (db *DB) connectDB(serviceName string) {
 	erro := db.returnClient(serviceName)
 	if erro != nil {
-		db.Log.Logger.Println("Erro ao se connectar com o DB", erro.Error())
+		db.Log.Logger.Println("Error on connecting to the Database", erro.Error())
 		return
 	}
 	db.Log.Logger.Println("Connected to DB!")
@@ -47,7 +47,9 @@ func (db *DB) returnClient(serviceName string) error {
 }
 
 func (db *DB) resetDatabase() (*mongo.DeleteResult, error) {
-	return gmc.Deletar(db.DBName, "accounts", db.Client, bson.M{})
+	collection := db.Client.Database(db.DBName).Collection("accounts")
+	result, error := collection.DeleteMany(context.TODO(), bson.M{})
+	return result, error
 }
 
 func (db *DB) getBalance(ID string) (*Account, error) {
@@ -71,8 +73,16 @@ func (db *DB) createAccount(account Account) (*mongo.InsertOneResult, error) {
 
 func (db *DB) depositAmount(account Account) error {
 	filter := bson.M{"id": account.ID}
-	atualizacao := bson.D{{Key: "$inc", Value: bson.M{"balance": account.Balance}}}
+	update := bson.D{{Key: "$inc", Value: bson.M{"balance": account.Balance}}}
 	collection := db.Client.Database(db.DBName).Collection("accounts")
-	_, error := collection.UpdateOne(context.TODO(), filter, atualizacao)
+	_, error := collection.UpdateOne(context.TODO(), filter, update)
+	return error
+}
+
+func (db *DB) withdrawAmount(account Account) error {
+	filter := bson.M{"id": account.ID}
+	update := bson.D{{Key: "$inc", Value: bson.M{"balance": account.Balance * -1}}}
+	collection := db.Client.Database(db.DBName).Collection("accounts")
+	_, error := collection.UpdateOne(context.TODO(), filter, update)
 	return error
 }

@@ -15,8 +15,8 @@ type AccountEvent struct {
 }
 
 type AccountEventResponse struct {
-	Origin      Account `json:"origin,omitempty"`
-	Destination Account `json:"destination,omitempty"`
+	Origin      *Account `json:"origin,omitempty"`
+	Destination *Account `json:"destination,omitempty"`
 }
 
 // ErrorResponse represents an error response to the user

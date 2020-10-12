@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -15,39 +14,37 @@ import (
 
 var server *Server
 var createdAccount = AccountEventResponse{
-	Destination: Account{
+	Destination: &Account{
 		ID:      "100",
 		Balance: 10,
 	},
 }
 var depositCreatedAccount = AccountEventResponse{
-	Destination: Account{
+	Destination: &Account{
 		ID:      "100",
 		Balance: 20,
 	},
 }
 
 var withdrawCreatedAccount = AccountEventResponse{
-	Origin: Account{
+	Origin: &Account{
 		ID:      "100",
 		Balance: 15,
 	},
 }
 
 var transferExistingAccount = AccountEventResponse{
-	Origin: Account{
+	Origin: &Account{
 		ID:      "100",
 		Balance: 0,
 	},
-	Destination: Account{
+	Destination: &Account{
 		ID:      "300",
 		Balance: 15,
 	},
 }
 
 func TestMain(m *testing.M) {
-	dbURL := os.Getenv("DBTEST_URL")
-	log.Println(dbURL)
 	server = NewServer("EBANX Assignment")
 	server.init()
 	code := m.Run()
@@ -55,16 +52,16 @@ func TestMain(m *testing.M) {
 }
 
 func TestReset(t *testing.T) {
-	request := criarRequisicao("POST", "/reset", nil)
-	response := executarRequisicao(request)
+	request := createRequest("POST", "/reset", nil)
+	response := execRequest(request)
 	assert.Equal(t, http.StatusOK, response.StatusCode, "shoud be equal")
 	body, _ := ioutil.ReadAll(response.Body)
 	assert.Equal(t, "OK", string(body), "should be equal")
 }
 
 func TestGetBalanceNonExistingAccount(t *testing.T) {
-	request := criarRequisicao("GET", "/balance?account_id=1234", nil)
-	response := executarRequisicao(request)
+	request := createRequest("GET", "/balance?account_id=1234", nil)
+	response := execRequest(request)
 	assert.Equal(t, fiber.StatusNotFound, response.StatusCode, "shoud be equal")
 	body, _ := ioutil.ReadAll(response.Body)
 	assert.Equal(t, "0", string(body), "should be equal")
@@ -76,11 +73,10 @@ func TestCreateAccountWithInitialBalance(t *testing.T) {
 		Destination: "100",
 		Amount:      10}
 	bodyPost, _ := json.Marshal(event)
-	request := criarRequisicao("POST", "/event", bodyPost)
-	response := executarRequisicao(request)
+	request := createRequest("POST", "/event", bodyPost)
+	response := execRequest(request)
 	assert.Equal(t, fiber.StatusCreated, response.StatusCode, "shoud be equal")
 	body, _ := ioutil.ReadAll(response.Body)
-	log.Println("body:", string(body))
 	var retorno AccountEventResponse
 	json.Unmarshal(body, &retorno)
 	assert.Equal(t, createdAccount, retorno, "should be equal")
@@ -92,8 +88,8 @@ func TestDepositIntoExistingAccount(t *testing.T) {
 		Destination: "100",
 		Amount:      10}
 	bodyPost, _ := json.Marshal(event)
-	request := criarRequisicao("POST", "/event", bodyPost)
-	response := executarRequisicao(request)
+	request := createRequest("POST", "/event", bodyPost)
+	response := execRequest(request)
 	assert.Equal(t, fiber.StatusCreated, response.StatusCode, "shoud be equal")
 	body, _ := ioutil.ReadAll(response.Body)
 	var retorno AccountEventResponse
@@ -102,8 +98,8 @@ func TestDepositIntoExistingAccount(t *testing.T) {
 }
 
 func TestGetBalanceExistingAccount(t *testing.T) {
-	request := criarRequisicao("GET", "/balance?account_id=100", nil)
-	response := executarRequisicao(request)
+	request := createRequest("GET", "/balance?account_id=100", nil)
+	response := execRequest(request)
 	assert.Equal(t, fiber.StatusOK, response.StatusCode, "shoud be equal")
 	body, _ := ioutil.ReadAll(response.Body)
 	assert.Equal(t, "20", string(body), "should be equal")
@@ -115,8 +111,8 @@ func TestWithdrawNonExistingAccount(t *testing.T) {
 		Origin: "200",
 		Amount: 10}
 	bodyPost, _ := json.Marshal(event)
-	request := criarRequisicao("POST", "/event", bodyPost)
-	response := executarRequisicao(request)
+	request := createRequest("POST", "/event", bodyPost)
+	response := execRequest(request)
 	assert.Equal(t, fiber.StatusNotFound, response.StatusCode, "shoud be equal")
 	body, _ := ioutil.ReadAll(response.Body)
 	assert.Equal(t, "0", string(body), "should be equal")
@@ -124,12 +120,12 @@ func TestWithdrawNonExistingAccount(t *testing.T) {
 
 func TestWithdrawExistingAccount(t *testing.T) {
 	event := AccountEvent{
-		Type:        "withdraw",
-		Destination: "100",
-		Amount:      5}
+		Type:   "withdraw",
+		Origin: "100",
+		Amount: 5}
 	bodyPost, _ := json.Marshal(event)
-	request := criarRequisicao("POST", "/event", bodyPost)
-	response := executarRequisicao(request)
+	request := createRequest("POST", "/event", bodyPost)
+	response := execRequest(request)
 	assert.Equal(t, fiber.StatusCreated, response.StatusCode, "shoud be equal")
 	body, _ := ioutil.ReadAll(response.Body)
 	var retorno AccountEventResponse
@@ -144,8 +140,8 @@ func TestTransferExistingAccount(t *testing.T) {
 		Destination: "300",
 		Amount:      15}
 	bodyPost, _ := json.Marshal(event)
-	request := criarRequisicao("POST", "/event", bodyPost)
-	response := executarRequisicao(request)
+	request := createRequest("POST", "/event", bodyPost)
+	response := execRequest(request)
 	assert.Equal(t, fiber.StatusCreated, response.StatusCode, "shoud be equal")
 	body, _ := ioutil.ReadAll(response.Body)
 	var retorno AccountEventResponse
@@ -160,14 +156,14 @@ func TestTransferFromNonExistingAccount(t *testing.T) {
 		Destination: "300",
 		Amount:      15}
 	bodyPost, _ := json.Marshal(event)
-	request := criarRequisicao("POST", "/event", bodyPost)
-	response := executarRequisicao(request)
+	request := createRequest("POST", "/event", bodyPost)
+	response := execRequest(request)
 	assert.Equal(t, fiber.StatusNotFound, response.StatusCode, "shoud be equal")
 	body, _ := ioutil.ReadAll(response.Body)
 	assert.Equal(t, "0", string(body), "should be equal")
 }
 
-func criarRequisicao(metodo string, url string, reqBody []byte) *http.Request {
+func createRequest(metodo string, url string, reqBody []byte) *http.Request {
 	var req *http.Request
 	if reqBody != nil {
 		req, _ = http.NewRequest(metodo, url, strings.NewReader(string(reqBody)))
@@ -177,7 +173,7 @@ func criarRequisicao(metodo string, url string, reqBody []byte) *http.Request {
 	return req
 }
 
-func executarRequisicao(req *http.Request) *http.Response {
+func execRequest(req *http.Request) *http.Response {
 	req.Header.Set("Content-Type", "application/json")
 	ret, _ := server.Fiber.Test(req)
 	return ret
